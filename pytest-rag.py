@@ -3,7 +3,7 @@ import re
 import subprocess
 import os
 
-from langchain.chains.retrieval_qa.base import RetrievalQA
+from langchain.chains.retrieval_qa import RetrievalQA
 from langchain.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.chat_models import ChatOpenAI
