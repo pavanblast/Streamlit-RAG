@@ -3,21 +3,58 @@ import re
 import subprocess
 import os
 
-from langchain.chains import RetrievalQA
+from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.chat_models import ChatOpenAI
 from sentence_transformers import SentenceTransformer
+from langchain.vectorstores import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.text_splitter import PythonCodeTextSplitter
+
+from langchain.document_loaders import DirectoryLoader, TextLoader
+from langchain.chains import RetrievalQA
+from langchain.chat_models import ChatOpenAI
+import shutil
 
 # Configuration
 VECTOR_DB_PATH = "faiss_index"
 DEEPSEEK_API_KEY = "sk-487936a049ba4e65a7c7a43101efc099"
 
+# STEP 1: Load Automation Code Files
+loader = DirectoryLoader(
+    path="C:\\Users\\chingepallykumar\\PycharmProjects\\LLMDemo",
+    glob="**/*.py",
+    loader_cls=TextLoader
+)
+
+# Loader for .feature files
+feature_loader = DirectoryLoader(
+    path="C:\\Users\\chingepallykumar\\PycharmProjects\\LLMDemo",
+    glob="**/*.feature",
+    loader_cls=TextLoader
+)
+
+# Load documents
+documents = loader.load() + feature_loader.load()
+
 embedding_model = HuggingFaceEmbeddings(
     model_name="hkunlp/instructor-xl"
 )
 
-vectordb = FAISS.load_local(VECTOR_DB_PATH, embedding_model, allow_dangerous_deserialization=True)
+embedding_model = HuggingFaceEmbeddings()
+if os.path.exists(VECTOR_DB_PATH):
+    print("✅ Loading existing vector DB...")
+    vectordb = FAISS.load_local(VECTOR_DB_PATH, embedding_model,allow_dangerous_deserialization=True)
+else:
+    print("🚀 Building vector DB for the first time...")
+    # Load and process documents (as you do)    
+    splitter = PythonCodeTextSplitter(chunk_size=800, chunk_overlap=100)
+    docs = splitter.split_documents(documents)
+
+    vectordb = FAISS.from_documents(docs, embedding_model)
+    vectordb.save_local(VECTOR_DB_PATH)
+    
 retriever = vectordb.as_retriever(search_type="similarity", search_kwargs={"k": 5})
 
 llm = ChatOpenAI(
